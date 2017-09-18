@@ -138,4 +138,24 @@ class CryptMechanism: NSObject {
     _ = self.mechanism.pointee.fPlugin.pointee.fCallbacks.pointee.SetResult(
       mechanism.pointee.fEngine, AuthorizationResult.allow)
   }
+
+  func needToRestart() -> Bool {
+    os_log("Checking to see if we need to restart now because we may not be on APFS", log: CryptMechanism.log, type: .default)
+    let task = Process();
+    task.launchPath = "/usr/bin/fdesetup"
+    task.arguments = ["status"]
+    let pipe = Pipe()
+    task.standardOutput = pipe
+    task.launch()
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    guard let output: String = String(data: data, encoding: String.Encoding.utf8)
+      else { return true }
+    if ((output.range(of: "restart")) != nil) {
+      os_log("Looks like we need to restart...", log: CryptMechanism.log, type: .default)
+      return true
+    } else {
+      os_log("No restart needed.", log: CryptMechanism.log, type: .default)
+      return false
+    }
+  }
 }

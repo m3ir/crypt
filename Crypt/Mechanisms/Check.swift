@@ -161,11 +161,14 @@ class Check: CryptMechanism {
       do {
         try _ = enableHighSierraFileVault(the_settings, filepath: filepath)
       } catch let error as NSError {
-        os_log("Caught error trying to Enable FileVault on High Sierra: %{public}@", log: Check.log, type: .error, error.localizedDescription)
+        os_log("Caught error trying to Enable FileVault on High Sierra: %{public}@", log: Check.log, type: .error, String(describing: error.localizedDescription))
         _ = setBoolHintValue(false)
         _ = allowLogin()
-        return;
       }
+      if needToRestart() {
+        _ = setBoolHintValue(true)
+      }
+      return;
     }
     else {
       os_log("FileVault is not enabled, Setting to enable...", log: Check.log, type: .error)

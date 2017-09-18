@@ -50,6 +50,11 @@ class Enablement: CryptMechanism {
       }
       catch let error as NSError {
         os_log("Failed to Enable FileVault %{public}@", log: Enablement.log, type: .error, error.localizedDescription)
+        // we may get here if we enabled filevault because we are on high sierra but on HFS still so a restart is needed
+        // enabling again will fail which is why we got here so lets check to see if we need to restart and do so if needed.
+        if needToRestart() {
+          _ = restartMac()
+        }
         _ = allowLogin()
       }
       
@@ -64,7 +69,9 @@ class Enablement: CryptMechanism {
   fileprivate func restartMac() -> Bool {
     // Wait a couple of seconds for everything to finish
     os_log("called restartMac()...", log: Enablement.log, type: .default)
-    sleep(3)
+    // sleep(3)
+    // We used to sleep but we don't need to anymore since we do a soft shutdown not a halt anymore
+    // This fixed os_log writing to the local datastore so we can actually view logs afterwards.
     let task = Process();
     os_log("Restarting Mac after enabling FileVault...", log: Enablement.log, type: .default)
     task.launchPath = "/sbin/shutdown"
@@ -147,9 +154,7 @@ class Enablement: CryptMechanism {
     
     if task.terminationStatus != 0 {
       let termstatus = String(describing: task.terminationStatus)
-      let termreason = String(describing: task.terminationReason)
       os_log("fdesetup terminated with a NON-Zero exit status: %{public}@", log: Enablement.log, type: .error, termstatus)
-      os_log("Termreason is: %{public}@", log: Enablement.log, type: .error, termreason)
       throw FileVaultError.fdeSetupFailed(retCode: task.terminationStatus)
     }
     
